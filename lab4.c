@@ -38,10 +38,10 @@ int main()
 	sweeping_freq = (float*)calloc(num_of_samps,sizeof(float));
 	mag_calced = (float*)calloc(num_of_samps,sizeof(float));
 	real_part = (float*)calloc(num_of_samps * 10,sizeof(float));
-	imag_part = (float*)calloc(num_of_samps * 10,sizeof(float));
+	imag_part = (float*)calloc(num_of_samps * 10,sizeof(float)); //multiplied by 10 for the additional input that was larger than the amount of fftlen
 	real_decimate = (float*)calloc(num_of_samps,sizeof(float));
 	imag_decimate = (float*)calloc(num_of_samps,sizeof(float));
-	combined_decimate = (float*)calloc(num_of_samps*2,sizeof(float));// 2 times the size as rest to hold two arrays
+	combined_decimate = (float*)calloc(num_of_samps*2,sizeof(float));// 2 times the size as rest to hold two output of the two decimate function
 	
 	//declare state and allocate memory for state
 	float *state = (float *)malloc((n_coef+num_of_samps-1)*sizeof(float));//allocate memory for based on blocksize and number of coefficients
@@ -69,7 +69,7 @@ int main()
 		
 		getblock(input);
 		f0 = F0 / 32; //update fo value based on 
-		for(int j = 0; j < num_of_samps * 10; j++) {
+		for(int j = 0; j < num_of_samps * 10; j++) { // fill the real part and the
 			angle = (2*PI*f0*j) % (2 * PI)
 			real_part[i] = input[i] * arm_cos_f32(angle); find the real part of the input
 			imag_part[i] = input[i] * arm_sin_f32(angle) * -1; //find the imaginary part of the input
@@ -87,15 +87,15 @@ int main()
 		// use the fast fourier transform on the combined decimation array. 
 		arm_cfft_f32(cfft,combined_decimate,0,0);
 		
-		// find the complex magnitude at every output place these values in out_2
+		// find the complex magnitude at every output place these values in mag_calced
 		arm_cmplex_mag_f32(combined_decimate,mag_calced,num_of_samps);
 		
-		//scale the output values to meet specification
+		//scale the magnitude
 		for (int l = 0; l < num_of_samps; l++) {
 			mag_calc[i] = mag_calced[i] * .011718 * 3; //scale the magnitude by the resoultion and the max output of the DAC. 
 		}
 
-		// output 1 and output 2 to DAC with hummels example
+		// sweepign frequency and scaled magnitude spectrum to DAC with hummels example
 		putblockstereo(sweeping_freq,mag_calced);
 
 		if (KeyPressed) { // check if key is pressed
