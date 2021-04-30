@@ -44,19 +44,15 @@ int main()
 	combined_decimate = (float*)calloc(num_of_samps*2,sizeof(float));// 2 times the size as rest to hold two output of the two decimate function
 	
 	//declare state and allocate memory for state
-	float *state = (float *)malloc((n_coef+num_of_samps-1)*sizeof(float));//allocate memory for based on blocksize and number of coefficients
-	if (state == NULL) {
-		flagerror(MEMORY_ALLOCATION_ERROR);
-		while(1);
-	}
-
+	float *state = (float *)malloc((n_coef+num_of_samps-1)*sizeof(float));//allocate memory for based on number of samples and number of coefficients
+	
 	//check to make sure all memory was allocated correctly
 	if (input == NULL || sweeping_freq == NULL 
 	|| mag_calced == NULL || real_part == NULL 
 	|| imag_part == NULL || real_decimate == NULL 
 	|| imag_decimate == NULL || combined_decimate  || state== NULL ||) {
 		flagerror(MEMORY_ALLOCATION_ERROR);
-		while(1);
+		while(1); //error found, while loop here
 	}
 	for (int k = 0; k < num_of_samps; k++) {
 		sweeping_freq[i] = -1 + (i/1024); //set the sweeping frequncy to a range from -1 to 1
@@ -70,15 +66,15 @@ int main()
 		getblock(input);
 		f0 = F0 / 32; //update fo value based on 
 		for(int j = 0; j < num_of_samps * 10; j++) { // fill the real part and the
-			angle = (2*PI*f0*j) % (2 * PI)
-			real_part[i] = input[i] * arm_cos_f32(angle); find the real part of the input
+			angle = (2*PI*f0*j) % (2 * PI) //find the angle and mod by 2 * PI to make cos and sin calculation quicker. 
+			real_part[i] = input[i] * arm_cos_f32(angle); //find the real part of the input
 			imag_part[i] = input[i] * arm_sin_f32(angle) * -1; //find the imaginary part of the input
 		}
 		//find real filter value and thats mostly it
-		arm_fir_decimate_f32(filter, real_part, real_decimate, num_of_samps); //use decimate function to filter and ecimate the real portion of the input
-		arm_fir_decimate_f32(filter, imag_part, imag_decimate, num_of_samps); //use decimate function to filter and decimate the imaginary portion of the output
+		arm_fir_decimate_f32(filter, real_part, real_decimate, num_of_samps * 10); //use decimate function to filter and ecimate the real portion of the input
+		arm_fir_decimate_f32(filter, imag_part, imag_decimate, num_of_samps * 10); //use decimate function to filter and decimate the imaginary portion of the output
 		
-		// combine the real and imaginary decimation portions
+		// combine the real and imaginary decimation portions into one array
 		for(int i = 0; i < num_of_samps * 2; i+2) {
 			combined_decimate[i] = real_decimate[i];
 			combined_decimate[i+1] = imag_decimate[i];
@@ -92,7 +88,7 @@ int main()
 		
 		//scale the magnitude
 		for (int l = 0; l < num_of_samps; l++) {
-			mag_calc[i] = mag_calced[i] * .011718 * 3; //scale the magnitude by the resoultion and the max output of the DAC. 
+			mag_calced[i] = mag_calced[i] * .011718 * 3; //scale the magnitude by the resoultion and the max output of the DAC. 
 		}
 
 		// sweepign frequency and scaled magnitude spectrum to DAC with hummels example
